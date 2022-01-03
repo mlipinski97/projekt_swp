@@ -21,3 +21,11 @@ D:\C#\projekt_swp\projekt_swp\bin\x64\Debug\Grammars\PESELGrammar.xml
 D:\C#\projekt_swp\projekt_swp\bin\x64\Debug\Grammars\PaymentGrammar.xml
 D:\C#\projekt_swp\projekt_swp\bin\x64\Debug\Grammars\YesNoGrammar.xml
 D:\C#\projekt_swp\projekt_swp\obj\x64\Debug\projekt_swp_Content.g.cs
+D:\C#\projekt_swp\projekt_swp\bin\x64\Debug\Microsoft.CognitiveServices.Speech.core.dll
+D:\C#\projekt_swp\projekt_swp\bin\x64\Debug\Microsoft.CognitiveServices.Speech.extension.audio.sys.dll
+D:\C#\projekt_swp\projekt_swp\bin\x64\Debug\Microsoft.CognitiveServices.Speech.extension.kws.dll
+D:\C#\projekt_swp\projekt_swp\bin\x64\Debug\Microsoft.CognitiveServices.Speech.extension.lu.dll
+D:\C#\projekt_swp\projekt_swp\bin\x64\Debug\Microsoft.CognitiveServices.Speech.extension.codec.dll
+D:\C#\projekt_swp\projekt_swp\bin\x64\Debug\Microsoft.CognitiveServices.Speech.extension.mas.dll
+D:\C#\projekt_swp\projekt_swp\bin\x64\Debug\Microsoft.CognitiveServices.Speech.csharp.dll
+D:\C#\projekt_swp\projekt_swp\bin\x64\Debug\Microsoft.CognitiveServices.Speech.csharp.xml
