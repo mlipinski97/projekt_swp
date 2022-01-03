@@ -1,0 +1,26 @@
+﻿<grammar version="1.0" xml:lang="pl-PL" root="rootRule" xmlns="http://www.w3.org/2001/06/grammar"
+         tag-format="semantics/1.0">
+  <rule id="rootRule">
+    <ruleref uri="#platnosc"></ruleref>
+    <tag>out.first=rules.latest();</tag>
+  </rule>
+
+  <rule id="platnosc">
+    <one-of>
+      <item>
+        karta <tag>out="karta"</tag>
+      </item>
+      <item>
+        kartą <tag>out="karta"</tag>
+      </item>
+      <item>
+        gotówka <tag>out="gotowka"</tag>
+      </item>
+      <item>
+        gotówką <tag>out="gotowka"</tag>
+      </item>
+    </one-of>
+  </rule>
+
+</grammar>
+

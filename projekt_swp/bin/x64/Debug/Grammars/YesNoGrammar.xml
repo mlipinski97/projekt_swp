@@ -1,0 +1,26 @@
+﻿<grammar version="1.0" xml:lang="pl-PL" root="rootRule" xmlns="http://www.w3.org/2001/06/grammar"
+         tag-format="semantics/1.0">
+  <rule id="rootRule">
+    <ruleref uri="#yesno"></ruleref>
+    <tag>out.first=rules.latest();</tag>
+  </rule>
+
+  <rule id="yesno">
+    <one-of>
+      <item>
+        tak <tag>out="yes"</tag>
+      </item>
+      <item>
+        yes <tag>out="yes"</tag>
+      </item>
+      <item>
+        nie <tag>out="no"</tag>
+      </item>
+      <item>
+        no <tag>out="no"</tag>
+      </item>
+    </one-of>
+  </rule>
+
+</grammar>
+

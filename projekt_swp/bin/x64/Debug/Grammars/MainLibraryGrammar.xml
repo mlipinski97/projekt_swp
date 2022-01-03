@@ -1,0 +1,26 @@
+﻿<grammar version="1.0" xml:lang="pl-PL" root="rootRule" xmlns="http://www.w3.org/2001/06/grammar"
+         tag-format="semantics/1.0">
+  <rule id="rootRule">
+    <ruleref uri="#akcja"></ruleref>
+    <tag>out.first=rules.latest();</tag>
+  </rule>
+
+  <rule id="akcja">
+    <one-of>
+      <item>
+        oddać <tag>out="oddac"</tag>
+      </item>
+      <item>
+        oddanie <tag>out="oddac"</tag>
+      </item>
+      <item>
+        wypożyczyć <tag>out="wypozyczyc"</tag>
+      </item>
+      <item>
+        wypożeczenie <tag>out="wypozyczyc"</tag>
+      </item>
+    </one-of>
+  </rule>
+
+</grammar>
+
