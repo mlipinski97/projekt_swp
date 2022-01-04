@@ -29,6 +29,7 @@ namespace projekt_swp
     {
         static Microsoft.Speech.Synthesis.SpeechSynthesizer ss;
         static SpeechRecognitionEngine sre;
+        static String Pesel = "";
         public MainWindow()
         {
             InitializeComponent();
@@ -44,7 +45,7 @@ namespace projekt_swp
             sre.LoadGrammar(grammar);
             sre.RecognizeAsync(RecognizeMode.Multiple);
         }
-
+        //chcialbym zaznaczyc ze robimy to jak zwierzeta w jednej klasie ale chyba nie mamy wyboru
         private void Sre_SpeechRecognized(object sender, SpeechRecognizedEventArgs e)
         {
             float confidence = e.Result.Confidence;
@@ -55,12 +56,89 @@ namespace projekt_swp
             }
             else
             {
-                string chosenAction = e.Result.Semantics["akcja"].Value.ToString();
-                Console.WriteLine(chosenAction);
+                string chosenAction = e.Result.Semantics["action"].Value.ToString();
+                if (chosenAction.Equals("oddac"))
+                {
+                    handleOddac();
+                }
+                if (chosenAction.Equals("wypozyczyc"))
+                {
+                    handleWypozyczyc();
+                }
+                if (chosenAction.Equals("none"))
+                {
+                    //chyba niepotrzebne, w zaleznosci jak postanowimy zrobic niezrozumiala odpowiedz
+                }
 
             }
         }
 
+        private void handleWypozyczyc()
+        {
+            ss.Speak("Którą książkę chciałbyś wypożyczyć?");
+            //wczytanie gramatyki odnosnie ksiazek. @Johny do decyzji jak robimy ksiazki, czy lista czy voice-to-text i LIKE do bazy
+            if (checkIfBookAvailable())
+            {
+                if (Pesel.Equals(""))
+                {
+                    ss.Speak("Proszę podać swój numer PESEL");
+                    //wczytanie gramatyki numeru pesel i wysuchanie peselu od uzytkownika. sprawdzenie czy sie zgadza regexem
+                }
+                else
+                {
+                    ss.Speak("Czy użyć wcześniej podanego numeru PESEL?");
+                    //wczytanie gramatyki tak-nie
+                }
+            }
+            else
+            {
+                ss.Speak("Książka którą próbujesz wypożyczyć jest obecnie niedostępna.");
+                ss.Speak("Czy chciałbyś zrobić coś jeszcze?");
+                //TODO zaimplementowac ladowanie gramatyki tak-nie wraz z pętlą przekierowującą na pierwsze pytanie (czy chcesz oddac/wypo)
+            }
+        }
+
+       
+        private bool checkIfBookAvailable()
+        {
+            //mock sprawdzania czy ksiazka jest dostepna w bazie danych
+            return checkIfOverdue();
+        }
+
+        public void handleOddac()
+        {
+            ss.Speak("Proszę umieścić książkę w miejscu oznaczonym na oddawanie książek.");
+            if (checkIfOverdue())
+            {
+               Console.WriteLine("ksiazka wymaga zaplacenia oplaty za przetrzymanie");
+               askForPaymentMethod();
+            } else
+            {
+               Console.WriteLine("ksiazka nie wymaga zaplacenia oplaty za przetrzymanie");
+               ss.Speak("Czy chciałbyś zrobić coś jeszcze?");
+               //TODO zaimplementowac ladowanie gramatyki tak-nie wraz z pętlą przekierowującą na pierwsze pytanie (czy chcesz oddac/wypo)
+            }
+        }
+
+        private void askForPaymentMethod()
+        {
+            throw new NotImplementedException();
+            //TODO wczytywanie gramatyki PaymentGrammar.xml (gramatyki platnosci: gotowka/karta)
+        }
+
+        //mockowanie sprawdzania czy ksiazka przetrzymana, normalnie powinno być sprawdzane z bazy danych.
+        //50% szansy ze przetrzymana 50% ze nie przetrzymana
+        private Boolean checkIfOverdue()
+        {
+            Random random = new Random();
+            if (random.Next(0, 2) == 1)
+            {
+                return true;
+            }
+            return false;
+        }
+
+        //obie klasy sa do voice-to-text od microsoftu
         public static async Task RecognizeSpeechAsync()
         {
             // Creates an instance of a speech config with specified subscription key and service region.

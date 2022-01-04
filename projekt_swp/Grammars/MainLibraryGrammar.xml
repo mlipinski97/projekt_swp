@@ -1,11 +1,11 @@
 ﻿<grammar version="1.0" xml:lang="pl-PL" root="rootRule" xmlns="http://www.w3.org/2001/06/grammar"
          tag-format="semantics/1.0">
   <rule id="rootRule">
-    <ruleref uri="#akcja"></ruleref>
-    <tag>out.first=rules.latest();</tag>
+    <ruleref uri="#action"></ruleref>
+    <tag>out.action=rules.latest();</tag>
   </rule>
 
-  <rule id="akcja">
+  <rule id="action">
     <one-of>
       <item>
         oddać <tag>out="oddac"</tag>
@@ -18,6 +18,9 @@
       </item>
       <item>
         wypożeczenie <tag>out="wypozyczyc"</tag>
+      </item>
+      <item>
+        none <tag>out="none"</tag>
       </item>
     </one-of>
   </rule>
