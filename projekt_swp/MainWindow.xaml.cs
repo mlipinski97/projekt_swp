@@ -16,6 +16,9 @@ using System.IO;
 using System.Threading.Tasks;
 using Microsoft.CognitiveServices.Speech;
 using Microsoft.CognitiveServices.Speech.Audio;
+using Microsoft.Speech.Synthesis;
+using Microsoft.Speech.Recognition;
+using System.Globalization;
 
 namespace projekt_swp
 {
@@ -24,10 +27,38 @@ namespace projekt_swp
     /// </summary>
     public partial class MainWindow : Window
     {
+        static Microsoft.Speech.Synthesis.SpeechSynthesizer ss;
+        static SpeechRecognitionEngine sre;
         public MainWindow()
         {
             InitializeComponent();
-            Main();
+            ss = new Microsoft.Speech.Synthesis.SpeechSynthesizer();
+            ss.SetOutputToDefaultAudioDevice();
+            ss.Speak("Witam w bibliotece cyfrowej. Chciałbyś oddać czy wypożyczyć książkę?");
+            CultureInfo ci = new CultureInfo("pl-PL");
+            sre = new SpeechRecognitionEngine(ci);
+            sre.SetInputToDefaultAudioDevice();
+            sre.SpeechRecognized += Sre_SpeechRecognized;
+            Microsoft.Speech.Recognition.Grammar grammar = new Microsoft.Speech.Recognition.Grammar(".\\Grammars\\MainLibraryGrammar.xml");
+            grammar.Enabled = true;
+            sre.LoadGrammar(grammar);
+            sre.RecognizeAsync(RecognizeMode.Multiple);
+        }
+
+        private void Sre_SpeechRecognized(object sender, SpeechRecognizedEventArgs e)
+        {
+            float confidence = e.Result.Confidence;
+            if (confidence <= 0.6)
+            {
+                Console.WriteLine("zbyt mała pewnosc (pewnosc równa: " + confidence + ")");
+
+            }
+            else
+            {
+                string chosenAction = e.Result.Semantics["akcja"].Value.ToString();
+                Console.WriteLine(chosenAction);
+
+            }
         }
 
         public static async Task RecognizeSpeechAsync()
@@ -72,7 +103,7 @@ namespace projekt_swp
             }
         }
 
-        static async Task Main()
+        static async Task ReadLineFromMic()
         {
             await RecognizeSpeechAsync();
             Console.WriteLine("Please press <Return> to continue.");
