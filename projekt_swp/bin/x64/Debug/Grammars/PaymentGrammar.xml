@@ -2,7 +2,7 @@
          tag-format="semantics/1.0">
   <rule id="rootRule">
     <ruleref uri="#platnosc"></ruleref>
-    <tag>out.first=rules.latest();</tag>
+    <tag>out.platnosc=rules.latest();</tag>
   </rule>
 
   <rule id="platnosc">

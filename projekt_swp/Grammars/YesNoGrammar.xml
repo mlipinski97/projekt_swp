@@ -2,7 +2,7 @@
          tag-format="semantics/1.0">
   <rule id="rootRule">
     <ruleref uri="#yesno"></ruleref>
-    <tag>out.first=rules.latest();</tag>
+    <tag>out.yesno=rules.latest();</tag>
   </rule>
 
   <rule id="yesno">

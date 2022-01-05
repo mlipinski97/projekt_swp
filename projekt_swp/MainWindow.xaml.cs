@@ -19,6 +19,7 @@ using Microsoft.CognitiveServices.Speech.Audio;
 using Microsoft.Speech.Synthesis;
 using Microsoft.Speech.Recognition;
 using System.Globalization;
+using System.Data.SqlClient;
 
 namespace projekt_swp
 {
@@ -30,6 +31,51 @@ namespace projekt_swp
         static Microsoft.Speech.Synthesis.SpeechSynthesizer ss;
         static SpeechRecognitionEngine sre;
         static String Pesel = "";
+        static String bookId = "";
+        SqlUtils sqlUtils;
+
+        class SqlUtils {
+            static string connetionString = "Server=tcp:swp-bookstore-server.database.windows.net,1433;" +
+                "Initial Catalog=swp-bookstore;" +
+                "Persist Security Info=False;" +
+                "User ID=swp;" +
+                "Password=waciak123$;" +
+                "MultipleActiveResultSets=False;" +
+                "Encrypt=True;" +
+                "TrustServerCertificate=False;" +
+                "Connection Timeout=30;";
+            static SqlConnection cnn = new SqlConnection(connetionString);
+            public SqlUtils()
+            {
+                cnn.Open();
+                Console.WriteLine("Connection Open!");
+            }
+
+            public void closeConnection()
+            {
+                cnn.Close();
+                Console.WriteLine("Connection closed!");
+            }
+            public DateTime checkIfOverdueInDataBase()
+            {
+                SqlCommand command;
+                SqlDataReader dataReader;
+                String sqlString;
+                DateTime returnDate = new DateTime();
+                sqlString = "SELECT return_time from borrows WHERE bookID = @bookId AND actual_return_time IS NULL";
+                command = cnn.CreateCommand();
+                command.CommandText = sqlString;
+                command.Parameters.AddWithValue("@bookId", bookId);
+                dataReader = command.ExecuteReader();
+                while (dataReader.Read())
+                {
+                    returnDate = dataReader.GetDateTime(0);
+                }
+                Console.WriteLine(returnDate.ToString());
+                return returnDate;
+            }
+        }
+
         public MainWindow()
         {
             InitializeComponent();
@@ -44,6 +90,7 @@ namespace projekt_swp
             grammar.Enabled = true;
             sre.LoadGrammar(grammar);
             sre.RecognizeAsync(RecognizeMode.Multiple);
+            sqlUtils = new SqlUtils();
         }
         //chcialbym zaznaczyc ze robimy to jak zwierzeta w jednej klasie ale chyba nie mamy wyboru
         private void Sre_SpeechRecognized(object sender, SpeechRecognizedEventArgs e)
@@ -60,6 +107,7 @@ namespace projekt_swp
                 if (chosenAction.Equals("oddac"))
                 {
                     handleOddac();
+
                 }
                 if (chosenAction.Equals("wypozyczyc"))
                 {
@@ -102,40 +150,94 @@ namespace projekt_swp
         private bool checkIfBookAvailable()
         {
             //mock sprawdzania czy ksiazka jest dostepna w bazie danych
-            return checkIfOverdue();
+            return isOverdue();
         }
 
         public void handleOddac()
         {
             ss.Speak("Proszę umieścić książkę w miejscu oznaczonym na oddawanie książek.");
-            if (checkIfOverdue())
+            if (isOverdue())
             {
                Console.WriteLine("ksiazka wymaga zaplacenia oplaty za przetrzymanie");
-               askForPaymentMethod();
+               Console.WriteLine("Platnosc karta czy gotowka?");
+               ss.Speak("Platnosc karta czy gotowka?");
+                changeGrammar(Sre_SpeechRecognized, Sre_AskForPaymentMethod, ".\\Grammars\\PaymentGrammar.xml");
             } else
             {
                Console.WriteLine("ksiazka nie wymaga zaplacenia oplaty za przetrzymanie");
                ss.Speak("Czy chciałbyś zrobić coś jeszcze?");
-               //TODO zaimplementowac ladowanie gramatyki tak-nie wraz z pętlą przekierowującą na pierwsze pytanie (czy chcesz oddac/wypo)
+                changeGrammar(Sre_SpeechRecognized, Sre_AskIfAnythingElse, ".\\Grammars\\YesNoGrammar.xml");
             }
         }
 
-        private void askForPaymentMethod()
+        private void changeGrammar(EventHandler<SpeechRecognizedEventArgs> methodNameToSubstract, 
+            EventHandler<SpeechRecognizedEventArgs> methodNameToAdd,
+            String grammarPath)
         {
-            throw new NotImplementedException();
+            sre.UnloadAllGrammars();
+            Microsoft.Speech.Recognition.Grammar grammar = new Microsoft.Speech.Recognition.Grammar(grammarPath);
+            grammar.Enabled = true;
+            sre.LoadGrammar(grammar);
+           
+            sre.SpeechRecognized -= methodNameToSubstract;
+            sre.SpeechRecognized += methodNameToAdd;
+        }
+        private void Sre_AskIfAnythingElse(object sender, SpeechRecognizedEventArgs e)
+        {
+            String result = e.Result.Text;
+            float confidence = e.Result.Confidence;
+            if (confidence >= 0.6)
+            {
+                string choice = e.Result.Semantics["yesno"].Value.ToString();
+                if (choice.Equals("yes"))
+                {
+                    ss.Speak("Chciałbyś oddać czy wypożyczyć książkę?");
+                    changeGrammar(Sre_AskIfAnythingElse, Sre_SpeechRecognized, ".\\Grammars\\MainLibraryGrammar.xml");
+                }
+                if (choice.Equals("no"))
+                {
+                    Console.WriteLine("Dziękuję, życzę miłego dnia");
+                    ss.Speak("Dziękuję, życzę miłego dnia");
+                }
+             }
+            else
+            {
+                Console.WriteLine("Prosze powtorzyc");
+                ss.SpeakAsync("Proszę powtórzyć");
+            }
+        }
+        private void Sre_AskForPaymentMethod(object sender, SpeechRecognizedEventArgs e)
+        {
+            String result = e.Result.Text;
+            float confidence = e.Result.Confidence;
+            if (confidence >= 0.6)
+            {
+                string chosenPayment = e.Result.Semantics["platnosc"].Value.ToString();
+                if (chosenPayment.Equals("karta"))
+                {
+                    Console.WriteLine("wybrano karte");
+                    ss.Speak("Wybrano kartę.");
+                }
+                if (chosenPayment.Equals("gotowka"))
+                {
+                    Console.WriteLine("wybrano gotówkę");
+                    ss.Speak("Wybrano gotówkę.");
+                }
+                Console.WriteLine("Czy chcesz zrobić coś jeszcze");
+                ss.Speak("Czy chcesz zrobić coś jeszcze?");
+                changeGrammar(Sre_AskForPaymentMethod, Sre_AskIfAnythingElse, ".\\Grammars\\YesNoGrammar.xml");
+            }
+            else
+            {
+                Console.WriteLine("Prosze powtorzyc");
+                ss.Speak("Proszę powtórzyć");
+            }
             //TODO wczytywanie gramatyki PaymentGrammar.xml (gramatyki platnosci: gotowka/karta)
         }
 
-        //mockowanie sprawdzania czy ksiazka przetrzymana, normalnie powinno być sprawdzane z bazy danych.
-        //50% szansy ze przetrzymana 50% ze nie przetrzymana
-        private Boolean checkIfOverdue()
+        private Boolean isOverdue()
         {
-            Random random = new Random();
-            if (random.Next(0, 2) == 1)
-            {
-                return true;
-            }
-            return false;
+            return sqlUtils.checkIfOverdueInDataBase() < DateTime.Now;
         }
 
         //obie klasy sa do voice-to-text od microsoftu
@@ -187,5 +289,11 @@ namespace projekt_swp
             Console.WriteLine("Please press <Return> to continue.");
             Console.ReadLine();
         }
+
+        private void TextBox_TextChanged(object sender, TextChangedEventArgs e)
+        {
+            bookId = bookIdTextBox.Text;
+        }
+
     }
 }
