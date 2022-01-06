@@ -20,6 +20,7 @@ using Microsoft.Speech.Synthesis;
 using Microsoft.Speech.Recognition;
 using System.Globalization;
 using System.Data.SqlClient;
+using System.Windows.Forms;
 
 namespace projekt_swp
 {
@@ -32,7 +33,9 @@ namespace projekt_swp
         static SpeechRecognitionEngine sre;
         static String Pesel = "";
         static String bookId = "";
+        static String bookName = "";
         SqlUtils sqlUtils;
+        static List<Book> books = new List<Book>();
 
         class SqlUtils {
             static string connetionString = "Server=tcp:swp-bookstore-server.database.windows.net,1433;" +
@@ -73,6 +76,89 @@ namespace projekt_swp
                 }
                 Console.WriteLine(returnDate.ToString());
                 return returnDate;
+            }
+
+            public void returnBook()
+            {
+                SqlCommand command;
+                SqlDataAdapter adapter = new SqlDataAdapter();
+                String sqlString;
+                sqlString = "UPDATE borrows SET actual_return_time = @actualReturnTime WHERE bookID = @bookId AND actual_return_time IS NULL";
+                command = cnn.CreateCommand();
+                command.CommandText = sqlString;
+                command.Parameters.AddWithValue("@actualReturnTime", DateTime.Now.ToString());
+                command.Parameters.AddWithValue("@bookId", bookId);
+                adapter.UpdateCommand = command;
+                adapter.UpdateCommand.ExecuteNonQuery();
+                command.Dispose();
+                Console.WriteLine("update complete");
+            }
+            public List<Book> getBooksLike(String bookName)
+            {
+                SqlCommand command;
+                SqlDataReader dataReader;
+                String sqlString;
+                sqlString = "select books.bookID, title, author, average_rating, num_pages, language_code from books " +
+                    "left join borrows on borrows.bookID = books.bookID where lower(title) " +
+                    "like lower(@bookName) and books.bookID not in (select bookID from borrows where actual_return_time is null)";
+                command = cnn.CreateCommand();
+                command.CommandText = sqlString;
+                command.Parameters.AddWithValue("@bookName", "%" + bookName + "%");
+                dataReader = command.ExecuteReader();
+                List<Book> books = new List<Book>();
+                int innerIdCounter = 1;
+                while (dataReader.Read())
+                {
+                    books.Add(new Book(innerIdCounter, dataReader.GetInt32(0), dataReader.GetString(1), dataReader.GetString(2), 
+                        dataReader.GetDecimal(3), dataReader.GetInt32(4), dataReader.GetString(5)));
+                    innerIdCounter++;
+                }               
+                return books;
+                
+            }
+            public void borrowBook(String innerBookId, String nrPesel)
+            {
+                SqlCommand command;
+                SqlDataAdapter adapter = new SqlDataAdapter();
+                String sqlString;
+                sqlString = "insert into borrows(pesel, bookID, borrow_time, return_time) values(@nrPesel, @bookId, @borrowTime, @returnTime)";
+                command = cnn.CreateCommand();
+                command.CommandText = sqlString;
+                command.Parameters.AddWithValue("@nrPesel", nrPesel);
+                command.Parameters.AddWithValue("@bookId", books.ElementAt(int.Parse(innerBookId) - 1).id);
+                command.Parameters.AddWithValue("@borrowTime", DateTime.Now.ToString());
+                command.Parameters.AddWithValue("@returnTime", DateTime.Now.AddDays(30).ToString());
+                adapter.InsertCommand = command;
+                adapter.InsertCommand.ExecuteNonQuery();
+                command.Dispose();
+                Console.WriteLine("insert complete");
+            }
+        }
+
+        class Book
+        {
+            public int innerId { get; set; }
+            public int id { get; set; }
+            public String title { get; set; }
+            public String author { get; set; }
+            public Decimal average_rating { get; set; }
+            public int num_pages { get; set; }
+            public String language_code { get; set; }
+
+            public Book(int innerId, int id, String title, String author, Decimal average_rating, int num_pages, String language_code)
+            {
+                this.innerId = innerId;
+                this.id = id;
+                this.title = title;
+                this.author = author;
+                this.average_rating = average_rating;
+                this.num_pages = num_pages;
+                this.language_code = language_code;
+            }
+            override public String ToString()
+            {
+                return this.id.ToString() + " " + title + " " + author
+                    + " " + average_rating.ToString() + " " + num_pages.ToString() + " " + language_code;
             }
         }
 
@@ -123,9 +209,52 @@ namespace projekt_swp
 
         private void handleWypozyczyc()
         {
-            ss.Speak("Którą książkę chciałbyś wypożyczyć?");
+            ss.SpeakAsync("Którą książkę chciałbyś wypożyczyć?");
+            bookName = bookNameTextBox.Text;
             //wczytanie gramatyki odnosnie ksiazek. @Johny do decyzji jak robimy ksiazki, czy lista czy voice-to-text i LIKE do bazy
-            if (checkIfBookAvailable())
+            books = sqlUtils.getBooksLike(bookNameTextBox.Text);
+            bookListView.Items.Clear();
+            var gridView = new GridView();
+            bookListView.View = gridView;
+            gridView.Columns.Add(new GridViewColumn
+            {
+                Header = "Id",
+                DisplayMemberBinding = new System.Windows.Data.Binding("innerId")
+            });
+            gridView.Columns.Add(new GridViewColumn
+            {
+                Header = "title",
+                DisplayMemberBinding = new System.Windows.Data.Binding("title")
+            });
+            gridView.Columns.Add(new GridViewColumn
+            {
+                Header = "author",
+                DisplayMemberBinding = new System.Windows.Data.Binding("author")
+            });
+            gridView.Columns.Add(new GridViewColumn
+            {
+                Header = "average rating",
+                DisplayMemberBinding = new System.Windows.Data.Binding("average_rating")
+            });
+            gridView.Columns.Add(new GridViewColumn
+            {
+                Header = "number of pages",
+                DisplayMemberBinding = new System.Windows.Data.Binding("num_pages")
+            });
+            gridView.Columns.Add(new GridViewColumn
+            {
+                Header = "language code",
+                DisplayMemberBinding = new System.Windows.Data.Binding("language_code")
+            });
+            foreach (Book book in books)
+            {
+                this.bookListView.Items.Add(book);
+                Console.WriteLine(book.ToString());
+            }
+
+            ss.Speak("Podaj numer książki którą chcesz wypożyczyć");
+
+            /*if (true)
             {
                 if (Pesel.Equals(""))
                 {
@@ -143,15 +272,10 @@ namespace projekt_swp
                 ss.Speak("Książka którą próbujesz wypożyczyć jest obecnie niedostępna.");
                 ss.Speak("Czy chciałbyś zrobić coś jeszcze?");
                 //TODO zaimplementowac ladowanie gramatyki tak-nie wraz z pętlą przekierowującą na pierwsze pytanie (czy chcesz oddac/wypo)
-            }
+            }*/
         }
 
-       
-        private bool checkIfBookAvailable()
-        {
-            //mock sprawdzania czy ksiazka jest dostepna w bazie danych
-            return isOverdue();
-        }
+
 
         public void handleOddac()
         {
@@ -165,6 +289,7 @@ namespace projekt_swp
             } else
             {
                Console.WriteLine("ksiazka nie wymaga zaplacenia oplaty za przetrzymanie");
+               sqlUtils.returnBook();
                ss.Speak("Czy chciałbyś zrobić coś jeszcze?");
                 changeGrammar(Sre_SpeechRecognized, Sre_AskIfAnythingElse, ".\\Grammars\\YesNoGrammar.xml");
             }
@@ -223,6 +348,7 @@ namespace projekt_swp
                     Console.WriteLine("wybrano gotówkę");
                     ss.Speak("Wybrano gotówkę.");
                 }
+                sqlUtils.returnBook();
                 Console.WriteLine("Czy chcesz zrobić coś jeszcze");
                 ss.Speak("Czy chcesz zrobić coś jeszcze?");
                 changeGrammar(Sre_AskForPaymentMethod, Sre_AskIfAnythingElse, ".\\Grammars\\YesNoGrammar.xml");
@@ -232,7 +358,7 @@ namespace projekt_swp
                 Console.WriteLine("Prosze powtorzyc");
                 ss.Speak("Proszę powtórzyć");
             }
-            //TODO wczytywanie gramatyki PaymentGrammar.xml (gramatyki platnosci: gotowka/karta)
+         
         }
 
         private Boolean isOverdue()
@@ -295,5 +421,9 @@ namespace projekt_swp
             bookId = bookIdTextBox.Text;
         }
 
+        private void Button_Click(object sender, RoutedEventArgs e)
+        {
+            sqlUtils.borrowBook(bookInnerId.Text, "12345678910");
+        }
     }
 }

@@ -4,10 +4,27 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:projekt_swp"
+        ResizeMode="NoResize"
         mc:Ignorable="d"
-        Title="MainWindow" Height="450" Width="800">
-    <Grid>
-        <TextBox x:Name="bookIdTextBox" HorizontalAlignment="Left" Margin="86,69,0,0" TextWrapping="Wrap" Text="TextBox" VerticalAlignment="Top" Width="120" TextChanged="TextBox_TextChanged"/>
+        Title="MainWindow" Height="980" Width="1720">
+    <Grid Margin="0,0,0,-6">
+        <Image Source="/biblioteka_tlo.png" Stretch="Fill"/>
+
+        <TextBox x:Name="bookIdTextBox" HorizontalAlignment="Left" Margin="1305,99,0,0" TextWrapping="Wrap" Text="" VerticalAlignment="Top" Width="120" TextChanged="TextBox_TextChanged"/>
+        <Label Content="id ksiazki do zwrócenia" HorizontalAlignment="Left" Margin="1305,73,0,0" VerticalAlignment="Top"/>
+        <Label Content="nazwa ksiazki do wypozyczenia" HorizontalAlignment="Left" Margin="1305,24,0,0" VerticalAlignment="Top"/>
+        <TextBox x:Name="bookNameTextBox" HorizontalAlignment="Left" Margin="1311,55,0,0" TextWrapping="Wrap" Text="" VerticalAlignment="Top" Width="120"/>
+
+        <ListView x:Name="bookListView" d:ItemsSource="{d:SampleData ItemCount=5}" Margin="1,207,178,0">
+            <ListView.View>
+                <GridView>
+                    <GridViewColumn/>
+                </GridView>
+            </ListView.View>
+        </ListView>
+        <Label Content="numer ksiazki z listy do wypozyczenia" HorizontalAlignment="Left" Margin="1305,122,0,0" VerticalAlignment="Top"/>
+        <TextBox x:Name="bookInnerId" HorizontalAlignment="Left" Margin="1305,148,0,0" TextWrapping="Wrap" Text="" VerticalAlignment="Top" Width="120"/>
+        <Button Content="wypozycz ksiażke" HorizontalAlignment="Left" Margin="1430,147,0,0" VerticalAlignment="Top" Click="Button_Click"/>
 
     </Grid>
 </Window>
