@@ -421,6 +421,7 @@ namespace projekt_swp
             bookId = bookIdTextBox.Text;
         }
 
+        //mockowa metoda
         private void Button_Click(object sender, RoutedEventArgs e)
         {
             sqlUtils.borrowBook(bookInnerId.Text, "12345678910");
