@@ -4,25 +4,25 @@
     <ruleref uri="#Number"></ruleref>
     <tag>out.first=rules.latest();</tag>
     <ruleref uri="#Number"></ruleref>
-    <tag>out.first=rules.latest();</tag>
+    <tag>out.second=rules.latest();</tag>
     <ruleref uri="#Number"></ruleref>
-    <tag>out.first=rules.latest();</tag>
+    <tag>out.third=rules.latest();</tag>
     <ruleref uri="#Number"></ruleref>
-    <tag>out.first=rules.latest();</tag>
+    <tag>out.fourth=rules.latest();</tag>
     <ruleref uri="#Number"></ruleref>
-    <tag>out.first=rules.latest();</tag>
+    <tag>out.fifth=rules.latest();</tag>
     <ruleref uri="#Number"></ruleref>
-    <tag>out.first=rules.latest();</tag>
+    <tag>out.sixth=rules.latest();</tag>
     <ruleref uri="#Number"></ruleref>
-    <tag>out.first=rules.latest();</tag>
+    <tag>out.seventh=rules.latest();</tag>
     <ruleref uri="#Number"></ruleref>
-    <tag>out.first=rules.latest();</tag>
+    <tag>out.eighth=rules.latest();</tag>
     <ruleref uri="#Number"></ruleref>
-    <tag>out.first=rules.latest();</tag>
+    <tag>out.ninth=rules.latest();</tag>
     <ruleref uri="#Number"></ruleref>
-    <tag>out.first=rules.latest();</tag>
+    <tag>out.tenth=rules.latest();</tag>
     <ruleref uri="#Number"></ruleref>
-    <tag>out.first=rules.latest();</tag>
+    <tag>out.eleventh=rules.latest();</tag>
   </rule>
 
   <rule id="Number">
