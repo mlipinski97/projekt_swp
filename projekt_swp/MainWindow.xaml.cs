@@ -14,8 +14,6 @@ using System.Windows.Navigation;
 using System.Windows.Shapes;
 using System.IO;
 using System.Threading.Tasks;
-using Microsoft.CognitiveServices.Speech;
-using Microsoft.CognitiveServices.Speech.Audio;
 using Microsoft.Speech.Synthesis;
 using Microsoft.Speech.Recognition;
 using System.Globalization;
@@ -36,6 +34,9 @@ namespace projekt_swp
         static String bookName = "";
         SqlUtils sqlUtils;
         static List<Book> books = new List<Book>();
+        static List<String> bookTitles = new List<String>();
+        static Grammar titlesGrammar;
+        static Grammar numbersGrammar;
 
         class SqlUtils {
             static string connetionString = "Server=tcp:swp-bookstore-server.database.windows.net,1433;" +
@@ -133,6 +134,37 @@ namespace projekt_swp
                 command.Dispose();
                 Console.WriteLine("insert complete");
             }
+
+            public void addNewPesel(String pesel)
+            {
+                SqlCommand command;
+                SqlDataAdapter adapter = new SqlDataAdapter();
+                String sqlString;
+                sqlString = "insert into users(pesel) values(@nrPesel)";
+                command = cnn.CreateCommand();
+                command.CommandText = sqlString;
+                command.Parameters.AddWithValue("@nrPesel", pesel);
+                adapter.InsertCommand = command;
+                adapter.InsertCommand.ExecuteNonQuery();
+                command.Dispose();
+                Console.WriteLine("insert complete");
+            }
+
+            public void fetchAllTitiles()
+            {
+                SqlCommand command;
+                SqlDataReader dataReader;
+                String sqlString;
+                sqlString = "select title from books";
+                command = cnn.CreateCommand();
+                command.CommandText = sqlString;
+                dataReader = command.ExecuteReader();
+                while (dataReader.Read())
+                {
+                    bookTitles.Add(dataReader.GetString(0));
+                }
+                Console.WriteLine("zaladowano wszystkie tytuly");
+            }
         }
 
         class Book
@@ -164,22 +196,54 @@ namespace projekt_swp
 
         public MainWindow()
         {
+            sqlUtils = new SqlUtils();
+            sqlUtils.fetchAllTitiles();
+            makeTitleList();
             InitializeComponent();
             ss = new Microsoft.Speech.Synthesis.SpeechSynthesizer();
             ss.SetOutputToDefaultAudioDevice();
-            ss.Speak("Witam w bibliotece cyfrowej. Chciałbyś oddać czy wypożyczyć książkę?");
+            ss.SpeakAsync("Witam w bibliotece cyfrowej. Chciałbyś oddać czy wypożyczyć książkę?");
             CultureInfo ci = new CultureInfo("pl-PL");
             sre = new SpeechRecognitionEngine(ci);
             sre.SetInputToDefaultAudioDevice();
-            sre.SpeechRecognized += Sre_SpeechRecognized;
-            Microsoft.Speech.Recognition.Grammar grammar = new Microsoft.Speech.Recognition.Grammar(".\\Grammars\\MainLibraryGrammar.xml");
+            sre.SpeechRecognized += Sre_ChooseAction;
+            Microsoft.Speech.Recognition.Grammar grammar = new Grammar(".\\Grammars\\MainLibraryGrammar.xml");
             grammar.Enabled = true;
             sre.LoadGrammar(grammar);
             sre.RecognizeAsync(RecognizeMode.Multiple);
-            sqlUtils = new SqlUtils();
+
+        }
+
+        public void makeNumberList(int maxNumber)
+        {
+            Choices numbers = new Choices();
+            for (int i = 1; i <= maxNumber; i++)
+            {
+                numbers.Add(i.ToString());
+            }
+            numbersGrammar = new Grammar(new GrammarBuilder(numbers));
+            Console.WriteLine("Stworzono gramatyke numerow do liczby: " + maxNumber);
+        }
+
+        public void makeTitleList()
+        {
+            List<String> allTitles = new List<String>();
+            bookTitles = bookTitles.Take(2000).ToList();
+            foreach (String title in bookTitles)
+            {
+                String[] wordsInTile = title.Trim().Split(' ', '"');
+                String currentWord = "";
+                foreach (String s in wordsInTile)
+                {
+                    currentWord += s.Trim() + " ";
+                    allTitles.Add(currentWord.Trim());
+                }
+            }
+            titlesGrammar = new Grammar(new GrammarBuilder(new Choices(allTitles.ToArray())));
+            Console.WriteLine("Stworzono gramatyke tytulow");
         }
         //chcialbym zaznaczyc ze robimy to jak zwierzeta w jednej klasie ale chyba nie mamy wyboru
-        private void Sre_SpeechRecognized(object sender, SpeechRecognizedEventArgs e)
+        private void Sre_ChooseAction(object sender, SpeechRecognizedEventArgs e)
         {
             float confidence = e.Result.Confidence;
             if (confidence <= 0.6)
@@ -207,12 +271,8 @@ namespace projekt_swp
             }
         }
 
-        private void handleWypozyczyc()
+        private void setupBookListView()
         {
-            ss.SpeakAsync("Którą książkę chciałbyś wypożyczyć?");
-            bookName = bookNameTextBox.Text;
-            //wczytanie gramatyki odnosnie ksiazek. @Johny do decyzji jak robimy ksiazki, czy lista czy voice-to-text i LIKE do bazy
-            books = sqlUtils.getBooksLike(bookNameTextBox.Text);
             bookListView.Items.Clear();
             var gridView = new GridView();
             bookListView.View = gridView;
@@ -246,36 +306,165 @@ namespace projekt_swp
                 Header = "language code",
                 DisplayMemberBinding = new System.Windows.Data.Binding("language_code")
             });
-            foreach (Book book in books)
-            {
-                this.bookListView.Items.Add(book);
-                Console.WriteLine(book.ToString());
-            }
+        }
 
-            ss.Speak("Podaj numer książki którą chcesz wypożyczyć");
 
-            /*if (true)
+        private void Sre_AskToUseSavedPesel(object sender, SpeechRecognizedEventArgs e)
+        {
+            String result = e.Result.Text;
+            float confidence = e.Result.Confidence;
+            if (confidence >= 0.6)
             {
-                if (Pesel.Equals(""))
+                string choice = e.Result.Semantics["yesno"].Value.ToString();
+                if (choice.Equals("yes"))
                 {
-                    ss.Speak("Proszę podać swój numer PESEL");
-                    //wczytanie gramatyki numeru pesel i wysuchanie peselu od uzytkownika. sprawdzenie czy sie zgadza regexem
+                   ss.SpeakAsync("Którą książkę chciałbyś wypożyczyć?");
+                    Console.WriteLine("Którą książkę chciałbyś wypożyczyć?");
+                   changeGrammar(Sre_AskToUseSavedPesel, Sre_AskForBookName, titlesGrammar);
+                    //tutaj powinna pojawić się zczytywanie ksiazki od uzytkownika
                 }
-                else
+                if (choice.Equals("no"))
                 {
-                    ss.Speak("Czy użyć wcześniej podanego numeru PESEL?");
-                    //wczytanie gramatyki tak-nie
+                    Console.WriteLine("proszę podać swój PESEL");
+                    ss.Speak("proszę podać swój PESEL");
+                    changeGrammar(Sre_AskToUseSavedPesel, Sre_AskForPesel, ".\\Grammars\\PESELGrammar.xml");
                 }
             }
             else
             {
-                ss.Speak("Książka którą próbujesz wypożyczyć jest obecnie niedostępna.");
-                ss.Speak("Czy chciałbyś zrobić coś jeszcze?");
-                //TODO zaimplementowac ladowanie gramatyki tak-nie wraz z pętlą przekierowującą na pierwsze pytanie (czy chcesz oddac/wypo)
-            }*/
+                Console.WriteLine("Prosze powtorzyc");
+                ss.SpeakAsync("Proszę powtórzyć");
+            }
         }
 
+        private void Sre_AskForBookName(object sender, SpeechRecognizedEventArgs e)
+        {
+            String result = e.Result.Text;
+            float confidence = e.Result.Confidence;
+            if (confidence >= 0.6)
+            {
+                bookName = e.Result.Text;
+                Console.WriteLine(bookName);   
+                books = sqlUtils.getBooksLike(bookName);
+                makeNumberList(books.Count());
+                setupBookListView();
+                foreach (Book book in books)
+                {
+                    this.bookListView.Items.Add(book);
+                    Console.WriteLine(book.ToString());
+                }
+                Console.WriteLine("Numer książki do wypożyczenia");
+                ss.SpeakAsync("Numer książki do wypożyczenia?");
+                changeGrammar(Sre_AskForBookName, Sre_AskForBookNumber, numbersGrammar);
+            }
+            else
+            {
+                Console.WriteLine("Prosze powtorzyc");
+                ss.SpeakAsync("Proszę powtórzyć");
+            }
+        }
 
+        private void Sre_AskForBookNumber(object sender, SpeechRecognizedEventArgs e)
+        {
+            String result = e.Result.Text;
+            float confidence = e.Result.Confidence;
+            if (confidence >= 0.6)
+            {
+                String bookNumber = e.Result.Text;
+                sqlUtils.borrowBook(bookNumber, Pesel);
+                Console.WriteLine(bookNumber);
+
+                Console.WriteLine("wypozyczono ksiazke z numerem: " + bookNumber + " Czy chciałbyś zrobić coś jeszcze?");
+                ss.SpeakAsync("wypozyczono ksiazke z numerem: " + bookNumber + ". Czy chciałbyś zrobić coś jeszcze?");
+                changeGrammar(Sre_AskForBookNumber, Sre_AskIfAnythingElse, ".\\Grammars\\YesNoGrammar.xml");
+            }
+            else
+            {
+                Console.WriteLine("Prosze powtorzyc");
+                ss.SpeakAsync("Proszę powtórzyć");
+            }
+        }
+
+        private void handleWypozyczyc()
+        {
+            if (!Pesel.Equals(""))
+            {
+                Console.WriteLine("Czy chcesz uzyc tego samego numeru pesel co poprzednio?");
+                ss.Speak("Czy chcesz użyć tego samego numeru PESEL co poprzednio?");
+                changeGrammar(Sre_ChooseAction, Sre_AskToUseSavedPesel, ".\\Grammars\\YesNoGrammar.xml");
+            }
+            else
+            {
+                Console.WriteLine("proszę podać swój PESEL");
+                ss.Speak("proszę podać swój PESEL");
+                changeGrammar(Sre_ChooseAction, Sre_AskForPesel, ".\\Grammars\\PESELGrammar.xml");
+            }
+
+        }
+
+        private void Sre_AskForPesel(object sender, SpeechRecognizedEventArgs e)
+        {
+            String result = e.Result.Text;
+            float confidence = e.Result.Confidence;
+            if (confidence >= 0.6)
+            {
+                string pesel = "";
+                pesel += e.Result.Semantics["first"].Value.ToString();
+                pesel += e.Result.Semantics["second"].Value.ToString();
+                pesel += e.Result.Semantics["third"].Value.ToString();
+                pesel += e.Result.Semantics["fourth"].Value.ToString();
+                pesel += e.Result.Semantics["fifth"].Value.ToString();
+                pesel += e.Result.Semantics["sixth"].Value.ToString();
+                pesel += e.Result.Semantics["seventh"].Value.ToString();
+                pesel += e.Result.Semantics["eighth"].Value.ToString();
+                pesel += e.Result.Semantics["ninth"].Value.ToString();
+                pesel += e.Result.Semantics["tenth"].Value.ToString();
+                pesel += e.Result.Semantics["eleventh"].Value.ToString();
+                Pesel = pesel;
+                Console.WriteLine("Czy PESEL jest poprawny? " + pesel);
+                ss.SpeakAsync("Czy PESEL jest poprawny?");
+                changeGrammar(Sre_AskForPesel, Sre_AskIfPeselIsCorrect, ".\\Grammars\\YesNoGrammar.xml");
+            }
+            else
+            {
+                Console.WriteLine("Prosze powtorzyc");
+                ss.SpeakAsync("Proszę powtórzyć");
+            }
+        }
+
+        private void Sre_AskIfPeselIsCorrect(object sender, SpeechRecognizedEventArgs e)
+        {
+            String result = e.Result.Text;
+            float confidence = e.Result.Confidence;
+            if (confidence >= 0.6)
+            {
+                string choice = e.Result.Semantics["yesno"].Value.ToString();
+                if (choice.Equals("yes"))
+                {
+                    try
+                    {
+                        sqlUtils.addNewPesel(Pesel);
+                    }catch (Exception)
+                    {
+                        Console.WriteLine("taki pesel juz jest wiec odrzucono insert :)");
+                    }
+                    ss.SpeakAsync("Którą książkę chciałbyś wypożyczyć?");
+                    Console.WriteLine("Którą książkę chciałbyś wypożyczyć?"); 
+                    changeGrammar(Sre_AskIfPeselIsCorrect, Sre_AskForBookName, titlesGrammar);
+                }
+                if (choice.Equals("no"))
+                {
+                    Console.WriteLine("prosze powtorzyc PESEL");
+                    ss.Speak("Proszę powtórzyć PESEL!");
+                    changeGrammar(Sre_AskIfPeselIsCorrect, Sre_AskForPesel, ".\\Grammars\\PESELGrammar.xml");
+                }
+            }
+            else
+            {
+                Console.WriteLine("Prosze powtorzyc");
+                ss.SpeakAsync("Proszę powtórzyć");
+            }
+        }
 
         public void handleOddac()
         {
@@ -285,13 +474,13 @@ namespace projekt_swp
                Console.WriteLine("ksiazka wymaga zaplacenia oplaty za przetrzymanie");
                Console.WriteLine("Platnosc karta czy gotowka?");
                ss.Speak("Platnosc karta czy gotowka?");
-                changeGrammar(Sre_SpeechRecognized, Sre_AskForPaymentMethod, ".\\Grammars\\PaymentGrammar.xml");
+               changeGrammar(Sre_ChooseAction, Sre_AskForPaymentMethod, ".\\Grammars\\PaymentGrammar.xml");
             } else
             {
                Console.WriteLine("ksiazka nie wymaga zaplacenia oplaty za przetrzymanie");
                sqlUtils.returnBook();
                ss.Speak("Czy chciałbyś zrobić coś jeszcze?");
-                changeGrammar(Sre_SpeechRecognized, Sre_AskIfAnythingElse, ".\\Grammars\\YesNoGrammar.xml");
+                changeGrammar(Sre_ChooseAction, Sre_AskIfAnythingElse, ".\\Grammars\\YesNoGrammar.xml");
             }
         }
 
@@ -307,6 +496,17 @@ namespace projekt_swp
             sre.SpeechRecognized -= methodNameToSubstract;
             sre.SpeechRecognized += methodNameToAdd;
         }
+
+        private void changeGrammar(EventHandler<SpeechRecognizedEventArgs> methodNameToSubstract,
+            EventHandler<SpeechRecognizedEventArgs> methodNameToAdd,
+            Microsoft.Speech.Recognition.Grammar newGrammar)
+        {
+            sre.UnloadAllGrammars();
+            newGrammar.Enabled = true;
+            sre.LoadGrammar(newGrammar);
+            sre.SpeechRecognized -= methodNameToSubstract;
+            sre.SpeechRecognized += methodNameToAdd;
+        }
         private void Sre_AskIfAnythingElse(object sender, SpeechRecognizedEventArgs e)
         {
             String result = e.Result.Text;
@@ -316,8 +516,9 @@ namespace projekt_swp
                 string choice = e.Result.Semantics["yesno"].Value.ToString();
                 if (choice.Equals("yes"))
                 {
+                    Console.WriteLine("Chciałbyś oddać czy wypożyczyć książkę?");
                     ss.Speak("Chciałbyś oddać czy wypożyczyć książkę?");
-                    changeGrammar(Sre_AskIfAnythingElse, Sre_SpeechRecognized, ".\\Grammars\\MainLibraryGrammar.xml");
+                    changeGrammar(Sre_AskIfAnythingElse, Sre_ChooseAction, ".\\Grammars\\MainLibraryGrammar.xml");
                 }
                 if (choice.Equals("no"))
                 {
@@ -366,65 +567,9 @@ namespace projekt_swp
             return sqlUtils.checkIfOverdueInDataBase() < DateTime.Now;
         }
 
-        //obie klasy sa do voice-to-text od microsoftu
-        public static async Task RecognizeSpeechAsync()
-        {
-            // Creates an instance of a speech config with specified subscription key and service region.
-            // Replace with your own subscription key // and service region (e.g., "westus").
-            var config = SpeechConfig.FromSubscription("<TUTAJ WKLEJAMY KOD SUBSKRYBCJI Z AZURE", "westeurope");
-
-            using (var recognizer = new SpeechRecognizer(config))
-            {
-                Console.WriteLine("Say something...");
-
-                // Starts speech recognition, and returns after a single utterance is recognized. The end of a
-                // single utterance is determined by listening for silence at the end or until a maximum of 15
-                // seconds of audio is processed.  The task returns the recognition text as result. 
-                // Note: Since RecognizeOnceAsync() returns only a single utterance, it is suitable only for single
-                // shot recognition like command or query. 
-                // For long-running multi-utterance recognition, use StartContinuousRecognitionAsync() instead.
-                var result = await recognizer.RecognizeOnceAsync();
-
-                // Checks result.
-                if (result.Reason == ResultReason.RecognizedSpeech)
-                {
-                    Console.WriteLine($"We recognized: {result.Text}");
-                }
-                else if (result.Reason == ResultReason.NoMatch)
-                {
-                    Console.WriteLine($"NOMATCH: Speech could not be recognized.");
-                }
-                else if (result.Reason == ResultReason.Canceled)
-                {
-                    var cancellation = CancellationDetails.FromResult(result);
-                    Console.WriteLine($"CANCELED: Reason={cancellation.Reason}");
-
-                    if (cancellation.Reason == CancellationReason.Error)
-                    {
-                        Console.WriteLine($"CANCELED: ErrorCode={cancellation.ErrorCode}");
-                        Console.WriteLine($"CANCELED: ErrorDetails={cancellation.ErrorDetails}");
-                        Console.WriteLine($"CANCELED: Did you update the subscription info?");
-                    }
-                }
-            }
-        }
-
-        static async Task ReadLineFromMic()
-        {
-            await RecognizeSpeechAsync();
-            Console.WriteLine("Please press <Return> to continue.");
-            Console.ReadLine();
-        }
-
         private void TextBox_TextChanged(object sender, TextChangedEventArgs e)
         {
             bookId = bookIdTextBox.Text;
-        }
-
-        //mockowa metoda
-        private void Button_Click(object sender, RoutedEventArgs e)
-        {
-            sqlUtils.borrowBook(bookInnerId.Text, "12345678910");
         }
     }
 }

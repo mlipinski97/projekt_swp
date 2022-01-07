@@ -12,8 +12,6 @@
 
         <TextBox x:Name="bookIdTextBox" HorizontalAlignment="Left" Margin="1305,99,0,0" TextWrapping="Wrap" Text="" VerticalAlignment="Top" Width="120" TextChanged="TextBox_TextChanged"/>
         <Label Content="id ksiazki do zwrócenia" HorizontalAlignment="Left" Margin="1305,73,0,0" VerticalAlignment="Top"/>
-        <Label Content="nazwa ksiazki do wypozyczenia" HorizontalAlignment="Left" Margin="1305,24,0,0" VerticalAlignment="Top"/>
-        <TextBox x:Name="bookNameTextBox" HorizontalAlignment="Left" Margin="1311,55,0,0" TextWrapping="Wrap" Text="" VerticalAlignment="Top" Width="120"/>
 
         <ListView x:Name="bookListView" d:ItemsSource="{d:SampleData ItemCount=5}" Margin="1,207,178,0">
             <ListView.View>
@@ -22,9 +20,6 @@
                 </GridView>
             </ListView.View>
         </ListView>
-        <Label Content="numer ksiazki z listy do wypozyczenia" HorizontalAlignment="Left" Margin="1305,122,0,0" VerticalAlignment="Top"/>
-        <TextBox x:Name="bookInnerId" HorizontalAlignment="Left" Margin="1305,148,0,0" TextWrapping="Wrap" Text="" VerticalAlignment="Top" Width="120"/>
-        <Button Content="wypozycz ksiażke" HorizontalAlignment="Left" Margin="1430,147,0,0" VerticalAlignment="Top" Click="Button_Click"/>
 
     </Grid>
 </Window>
