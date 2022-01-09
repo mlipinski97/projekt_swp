@@ -62,6 +62,8 @@ namespace projekt_swp
             }
             public DateTime checkIfOverdueInDataBase()
             {
+                cnn.Close();
+                cnn.Open();
                 SqlCommand command;
                 SqlDataReader dataReader;
                 String sqlString;
@@ -76,26 +78,31 @@ namespace projekt_swp
                     returnDate = dataReader.GetDateTime(0);
                 }
                 Console.WriteLine(returnDate.ToString());
+                command.Dispose();
                 return returnDate;
             }
 
             public void returnBook()
             {
-                SqlCommand command;
+                cnn.Close();
+                cnn.Open();
+                SqlCommand updateCommand;
                 SqlDataAdapter adapter = new SqlDataAdapter();
                 String sqlString;
                 sqlString = "UPDATE borrows SET actual_return_time = @actualReturnTime WHERE bookID = @bookId AND actual_return_time IS NULL";
-                command = cnn.CreateCommand();
-                command.CommandText = sqlString;
-                command.Parameters.AddWithValue("@actualReturnTime", DateTime.Now.ToString());
-                command.Parameters.AddWithValue("@bookId", bookId);
-                adapter.UpdateCommand = command;
+                updateCommand = cnn.CreateCommand();
+                updateCommand.CommandText = sqlString;
+                updateCommand.Parameters.AddWithValue("@actualReturnTime", DateTime.Now.ToString());
+                updateCommand.Parameters.AddWithValue("@bookId", bookId);
+                adapter.UpdateCommand = updateCommand;
                 adapter.UpdateCommand.ExecuteNonQuery();
-                command.Dispose();
+                updateCommand.Dispose();
                 Console.WriteLine("update complete");
             }
             public List<Book> getBooksLike(String bookName)
             {
+                cnn.Close();
+                cnn.Open();
                 SqlCommand command;
                 SqlDataReader dataReader;
                 String sqlString;
@@ -119,6 +126,8 @@ namespace projekt_swp
             }
             public void borrowBook(String innerBookId, String nrPesel)
             {
+                cnn.Close();
+                cnn.Open();
                 SqlCommand command;
                 SqlDataAdapter adapter = new SqlDataAdapter();
                 String sqlString;
@@ -137,6 +146,8 @@ namespace projekt_swp
 
             public void addNewPesel(String pesel)
             {
+                cnn.Close();
+                cnn.Open();
                 SqlCommand command;
                 SqlDataAdapter adapter = new SqlDataAdapter();
                 String sqlString;
@@ -152,6 +163,8 @@ namespace projekt_swp
 
             public void fetchAllTitiles()
             {
+                cnn.Close();
+                cnn.Open();
                 SqlCommand command;
                 SqlDataReader dataReader;
                 String sqlString;
