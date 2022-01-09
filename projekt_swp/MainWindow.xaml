@@ -13,7 +13,7 @@
         <TextBox x:Name="bookIdTextBox" HorizontalAlignment="Left" Margin="1305,99,0,0" TextWrapping="Wrap" Text="" VerticalAlignment="Top" Width="120" TextChanged="TextBox_TextChanged"/>
         <Label Content="id ksiazki do zwrócenia" HorizontalAlignment="Left" Margin="1305,73,0,0" VerticalAlignment="Top"/>
 
-        <ListView x:Name="bookListView" d:ItemsSource="{d:SampleData ItemCount=5}" Margin="1,207,178,0">
+        <ListView x:Name="bookListView" d:ItemsSource="{d:SampleData ItemCount=5}" Margin="10,207,169,0">
             <ListView.View>
                 <GridView>
                     <GridViewColumn/>

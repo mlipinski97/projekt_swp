@@ -213,7 +213,7 @@ namespace projekt_swp
             sqlUtils.fetchAllTitiles();
             makeTitleList();
             InitializeComponent();
-            ss = new Microsoft.Speech.Synthesis.SpeechSynthesizer();
+            ss = new SpeechSynthesizer();
             ss.SetOutputToDefaultAudioDevice();
             ss.SpeakAsync("Witam w bibliotece cyfrowej. Chciałbyś oddać czy wypożyczyć książkę?");
             CultureInfo ci = new CultureInfo("pl-PL");
