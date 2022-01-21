@@ -37,6 +37,7 @@ namespace projekt_swp
         static List<String> bookTitles = new List<String>();
         static Grammar titlesGrammar;
         static Grammar numbersGrammar;
+        static Boolean advancedUser = false;
 
         class SqlUtils {
             static string connetionString = "Server=tcp:swp-bookstore-server.database.windows.net,1433;" +
@@ -255,7 +256,6 @@ namespace projekt_swp
             titlesGrammar = new Grammar(new GrammarBuilder(new Choices(allTitles.ToArray())));
             Console.WriteLine("Stworzono gramatyke tytulow");
         }
-        //chcialbym zaznaczyc ze robimy to jak zwierzeta w jednej klasie ale chyba nie mamy wyboru
         private void Sre_ChooseAction(object sender, SpeechRecognizedEventArgs e)
         {
             float confidence = e.Result.Confidence;
@@ -274,7 +274,32 @@ namespace projekt_swp
                 }
                 if (chosenAction.Equals("wypozyczyc"))
                 {
-                    handleWypozyczyc();
+                    string pesel = "";
+                    pesel += e.Result.Semantics["first"].Value.ToString();
+                    pesel += e.Result.Semantics["second"].Value.ToString();
+                    pesel += e.Result.Semantics["third"].Value.ToString();
+                    pesel += e.Result.Semantics["fourth"].Value.ToString();
+                    pesel += e.Result.Semantics["fifth"].Value.ToString();
+                    pesel += e.Result.Semantics["sixth"].Value.ToString();
+                    pesel += e.Result.Semantics["seventh"].Value.ToString();
+                    pesel += e.Result.Semantics["eighth"].Value.ToString();
+                    pesel += e.Result.Semantics["ninth"].Value.ToString();
+                    pesel += e.Result.Semantics["tenth"].Value.ToString();
+                    pesel += e.Result.Semantics["eleventh"].Value.ToString();
+                    Pesel = pesel;
+                    if (pesel.Length == 11)
+                    {
+                        Console.WriteLine("Czy PESEL jest poprawny? " + pesel);
+                        ss.SpeakAsync("Czy PESEL jest poprawny?");
+                        changeGrammar(Sre_ChooseAction, Sre_AskIfPeselIsCorrect, ".\\Grammars\\YesNoGrammar.xml");
+                    }
+                    else
+                    {
+                        Console.WriteLine("PESEL jest niepoprawny " + pesel);
+                        ss.SpeakAsync("PESEL jest niepoprawny!");
+                        Pesel = "";
+                        handleWypozyczyc();
+                    }
                 }
                 if (chosenAction.Equals("none"))
                 {
@@ -400,16 +425,16 @@ namespace projekt_swp
 
         private void handleWypozyczyc()
         {
-            if (!Pesel.Equals(""))
+            if (!Pesel.Equals("") )
             {
                 Console.WriteLine("Czy chcesz uzyc tego samego numeru pesel co poprzednio?");
-                ss.Speak("Czy chcesz użyć tego samego numeru PESEL co poprzednio?");
+                ss.SpeakAsync("Czy chcesz użyć tego samego numeru PESEL co poprzednio?");
                 changeGrammar(Sre_ChooseAction, Sre_AskToUseSavedPesel, ".\\Grammars\\YesNoGrammar.xml");
             }
             else
             {
                 Console.WriteLine("proszę podać swój PESEL");
-                ss.Speak("proszę podać swój PESEL");
+                ss.SpeakAsync("proszę podać swój PESEL");
                 changeGrammar(Sre_ChooseAction, Sre_AskForPesel, ".\\Grammars\\PESELGrammar.xml");
             }
 
